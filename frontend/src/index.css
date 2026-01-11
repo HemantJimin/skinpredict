@@ -75,7 +75,23 @@ body {
 @media (max-width: 768px) {
   .content-grid {
     grid-template-columns: 1fr;
+    display: flex;
+    flex-direction: column;
   }
+}
+
+/* Column Classes */
+.left-column {
+  /* Default handled by grid */
+}
+
+.right-column {
+  /* Default handled by grid */
+}
+
+@media (min-width: 769px) {
+    .left-column { grid-column: 1; }
+    .right-column { grid-column: 2; }
 }
 
 /* =========================================

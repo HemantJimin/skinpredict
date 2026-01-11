@@ -98,7 +98,7 @@ function App() {
                 <div className="content-grid">
                     
                     {/* Left Column: Form */}
-                    <div style={{gridColumn: '1'}} className="fade-in stagger-1">
+                    <div className="fade-in stagger-1 left-column">
                         <div className="glass-card form-card">
                             <h2 style={{display: 'flex', alignItems: 'center', gap: '0.5rem'}}>
                                 <span>👤</span> Your Profile
@@ -194,7 +194,7 @@ function App() {
                     </div>
 
                     {/* Right Column: Medicine Tracker & Results */}
-                    <div style={{gridColumn: '2'}} className="fade-in stagger-2">
+                    <div className="fade-in stagger-2 right-column">
                         
                         <div style={{marginBottom: '3rem'}}>
                             <MedicineTracker />
