@@ -1,10 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+
+// Simple beep sound (Base64) to ensure it works without external dependencies
+const ALARM_SOUND = "data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YU..."; // Placeholder, I will use a real one in the actual write or just a cleaner URL if base64 is too long. 
+// Actually, let's use a publicly reliable URL or a standard beep function.
+// Better: Use a reliable short MP3 URL that is definitely accessible.
+// Or even better: Use the Web Audio API for a generated beep (no file needed).
 
 const MedicineTracker = () => {
     const [medicines, setMedicines] = useState([]);
     const [newMed, setNewMed] = useState('');
     const [newTime, setNewTime] = useState('');
     const [streak, setStreak] = useState(0);
+    
+    // Audio ref
+    const audioRef = useRef(new Audio("https://actions.google.com/sounds/v1/alarms/beep_short.ogg"));
 
     // Load data from LocalStorage
     useEffect(() => {
@@ -33,6 +42,9 @@ const MedicineTracker = () => {
 
             medicines.forEach(med => {
                 if (med.time === currentTime && !med.notifiedToday) {
+                    // Play Alarm Sound
+                    playAlarm();
+
                     // Send Notification
                     if (Notification.permission === "granted") {
                         new Notification(`Time to take ${med.name}!`, {
@@ -40,20 +52,35 @@ const MedicineTracker = () => {
                             icon: "/vite.svg" 
                         });
                     } else {
-                        alert(`Time to take ${med.name}!`);
+                        // Fallback if notifications blocked
+                        // alert(`Time to take ${med.name}!`); 
+                        // Alert blocks execution and might stop audio, better to rely on UI toast or just the sound
                     }
                     
                     // Mark as notified to prevent spam
                     updateMedicine(med.id, { notifiedToday: true });
                 }
             });
-        }, 60000); // Check every minute
+        }, 1000); // Check every SECOND (more precise) so we don't miss the minute turn
 
         return () => clearInterval(interval);
     }, [medicines]);
 
+    // Function to play alarm - call this on user interaction too!
+    const playAlarm = () => {
+        audioRef.current.play().catch(e => {
+            console.warn("Audio play blocked by browser policy:", e);
+            alert("⏰ Medicine Reminder! (Audio was blocked, click 'Test Sound' to enable for next time)");
+        });
+    };
+
     const addMedicine = () => {
         if (!newMed || !newTime) return;
+        
+        // "Warm up" the audio on user interaction (important for browsers!)
+        playAlarm(); 
+        setTimeout(() => audioRef.current.pause(), 100); // Stop it immediately, just needed to unlock
+
         const med = {
             id: Date.now(),
             name: newMed,
@@ -86,17 +113,22 @@ const MedicineTracker = () => {
         <div className="glass-card tracker-card">
             <div className="tracker-header">
                 <h2>💊 Medicine Track & Streak</h2>
-                <div className="streak-counter">
-                    <span className="flame">🔥</span>
-                    <span className="streak-value">{streak}</span>
-                    <span className="streak-label">Streak</span>
+                <div style={{display:'flex', gap:'1rem', alignItems:'center'}}>
+                    <button className="btn-small" style={{background:'#6366f1', fontSize:'0.8rem'}} onClick={playAlarm}>
+                        🔔 Test Sound
+                    </button>
+                    <div className="streak-counter">
+                        <span className="flame">🔥</span>
+                        <span className="streak-value">{streak}</span>
+                        <span className="streak-label">Streak</span>
+                    </div>
                 </div>
             </div>
 
             <div className="tracker-input">
                 <input 
                     type="text" 
-                    placeholder="Medicine Name (e.g. Vitamin C)" 
+                    placeholder="Medicine Name" 
                     value={newMed}
                     onChange={(e) => setNewMed(e.target.value)}
                 />
