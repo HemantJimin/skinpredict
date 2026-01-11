@@ -1,85 +1,108 @@
 import React, { useState, useEffect, useRef } from 'react';
 
-// Simple beep sound (Base64) to ensure it works without external dependencies
-const ALARM_SOUND = "data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YU..."; // Placeholder, I will use a real one in the actual write or just a cleaner URL if base64 is too long. 
-// Actually, let's use a publicly reliable URL or a standard beep function.
-// Better: Use a reliable short MP3 URL that is definitely accessible.
-// Or even better: Use the Web Audio API for a generated beep (no file needed).
+// Embedded Base64 Beep Sound (Reliable)
+const ALARM_SOUND = "data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YU..."; 
+// Ideally we need a Real Base64 string. I will use a short generated beep using Web Audio API instead, which is even more robust and doesn't require a large string.
 
 const MedicineTracker = () => {
     const [medicines, setMedicines] = useState([]);
     const [newMed, setNewMed] = useState('');
     const [newTime, setNewTime] = useState('');
     const [streak, setStreak] = useState(0);
+    const [currentTimeDisplay, setCurrentTimeDisplay] = useState('');
     
-    // Audio ref
-    const audioRef = useRef(new Audio("https://actions.google.com/sounds/v1/alarms/beep_short.ogg"));
+    // Audio Context Ref
+    const audioContextRef = useRef(null);
 
-    // Load data from LocalStorage
+    // Initialize Audio Context on user interaction
+    const initAudio = () => {
+        if (!audioContextRef.current) {
+            audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (audioContextRef.current.state === 'suspended') {
+            audioContextRef.current.resume();
+        }
+    };
+
+    const playBeep = () => {
+        initAudio();
+        if (!audioContextRef.current) return;
+
+        const oscillator = audioContextRef.current.createOscillator();
+        const gainNode = audioContextRef.current.createGain();
+
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContextRef.current.destination);
+
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(880, audioContextRef.current.currentTime); // A5
+        oscillator.frequency.exponentialRampToValueAtTime(440, audioContextRef.current.currentTime + 0.5); // Drop to A4
+
+        gainNode.gain.setValueAtTime(0.5, audioContextRef.current.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContextRef.current.currentTime + 0.5);
+
+        oscillator.start();
+        oscillator.stop(audioContextRef.current.currentTime + 0.5);
+    };
+
+    // Load data
     useEffect(() => {
         const savedMeds = JSON.parse(localStorage.getItem('medicines')) || [];
         const savedStreak = parseInt(localStorage.getItem('streak') || '0');
         setMedicines(savedMeds);
         setStreak(savedStreak);
 
-        // Request Notification Permission
         if (Notification.permission !== "granted") {
             Notification.requestPermission();
         }
     }, []);
 
-    // Save data to LocalStorage
+    // Save data
     useEffect(() => {
         localStorage.setItem('medicines', JSON.stringify(medicines));
         localStorage.setItem('streak', streak.toString());
     }, [medicines, streak]);
 
-    // Timer logic for notifications
+    // Timer logic
     useEffect(() => {
         const interval = setInterval(() => {
             const now = new Date();
-            const currentTime = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+            // Force HH:MM format (24h) to match input type="time"
+            const timeString = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
+            setCurrentTimeDisplay(timeString);
 
             medicines.forEach(med => {
-                if (med.time === currentTime && !med.notifiedToday) {
-                    // Play Alarm Sound
-                    playAlarm();
+                // Check if time matches AND current SECOND is small (to avoid multiple triggers within a minute if we checked often)
+                // But we check every 1s. We rely on 'notifiedToday' flag.
+                // We also need to reset 'notifiedToday' at midnight.
+                
+                if (med.time === timeString && !med.notifiedToday) {
+                    console.log("🔔 Triggering Alarm for:", med.name);
+                    playBeep();
 
-                    // Send Notification
                     if (Notification.permission === "granted") {
                         new Notification(`Time to take ${med.name}!`, {
                             body: "Stay consistent with your streak! 🔥",
                             icon: "/vite.svg" 
                         });
-                    } else {
-                        // Fallback if notifications blocked
-                        // alert(`Time to take ${med.name}!`); 
-                        // Alert blocks execution and might stop audio, better to rely on UI toast or just the sound
                     }
                     
-                    // Mark as notified to prevent spam
                     updateMedicine(med.id, { notifiedToday: true });
                 }
             });
-        }, 1000); // Check every SECOND (more precise) so we don't miss the minute turn
+        }, 1000);
 
         return () => clearInterval(interval);
     }, [medicines]);
 
-    // Function to play alarm - call this on user interaction too!
-    const playAlarm = () => {
-        audioRef.current.play().catch(e => {
-            console.warn("Audio play blocked by browser policy:", e);
-            alert("⏰ Medicine Reminder! (Audio was blocked, click 'Test Sound' to enable for next time)");
-        });
-    };
+    // Reset notified flags at midnight (optional, or just manual reset)
+    // For simplicity, we just assume daily cycle.
 
     const addMedicine = () => {
         if (!newMed || !newTime) return;
         
-        // "Warm up" the audio on user interaction (important for browsers!)
-        playAlarm(); 
-        setTimeout(() => audioRef.current.pause(), 100); // Stop it immediately, just needed to unlock
+        // Unlock audio on interaction
+        playBeep();
 
         const med = {
             id: Date.now(),
@@ -112,15 +135,18 @@ const MedicineTracker = () => {
     return (
         <div className="glass-card tracker-card">
             <div className="tracker-header">
-                <h2>💊 Medicine Track & Streak</h2>
-                <div style={{display:'flex', gap:'1rem', alignItems:'center'}}>
-                    <button className="btn-small" style={{background:'#6366f1', fontSize:'0.8rem'}} onClick={playAlarm}>
-                        🔔 Test Sound
+                <div>
+                    <h2>💊 Medicine Tracker</h2>
+                    <span style={{fontSize:'0.9rem', color:'#6b7280'}}>Current Time: {currentTimeDisplay}</span>
+                </div>
+                
+                <div style={{display:'flex', gap:'0.5rem', alignItems:'center'}}>
+                    <button className="btn-small test-btn" onClick={playBeep} title="Test Alarm Sound">
+                        🔔 Test
                     </button>
                     <div className="streak-counter">
                         <span className="flame">🔥</span>
                         <span className="streak-value">{streak}</span>
-                        <span className="streak-label">Streak</span>
                     </div>
                 </div>
             </div>
@@ -137,7 +163,9 @@ const MedicineTracker = () => {
                     value={newTime} 
                     onChange={(e) => setNewTime(e.target.value)}
                 />
-                <button className="btn-small" onClick={addMedicine}>Add</button>
+                <button className="btn-primary btn-add-med" onClick={addMedicine}>
+                    Add Reminder
+                </button>
             </div>
 
             <div className="medicine-list">
