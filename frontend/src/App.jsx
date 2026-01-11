@@ -49,8 +49,9 @@ function App() {
           "Diet_Quality": formData.dietQuality
       };
 
-      // Using relative path via Vite Proxy
-      const response = await fetch('/predict', {
+      // Use /api/predict for Vercel, fallback to /predict for local dev
+      const apiEndpoint = import.meta.env.MODE === 'production' ? '/api/predict' : '/predict';
+      const response = await fetch(apiEndpoint, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
