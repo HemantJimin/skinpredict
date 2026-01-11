@@ -622,3 +622,78 @@ input:focus, select:focus {
   margin-bottom: 0.5rem;
 }
 
+/* =========================================
+   Final Mobile Polish
+   ========================================= */
+@media (max-width: 768px) {
+  /* Layout */
+  #root {
+    padding: 1rem;
+    overflow-x: hidden;
+  }
+
+  .content-grid {
+    gap: 2rem;
+  }
+
+  /* Header */
+  .header {
+    padding: 1rem 0;
+    background: rgba(255, 255, 255, 0.9); /* Opaque for readability */
+  }
+
+  .nav-link {
+    margin-left: 1rem;
+    font-size: 0.9rem;
+  }
+
+  /* Hero */
+  h1 {
+    font-size: 2rem;
+    line-height: 1.2;
+  }
+
+  .subtitle {
+    font-size: 1rem;
+  }
+
+  /* Form */
+  .form-row {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  /* About Section */
+  .about-section {
+    padding: 3rem 0;
+    margin-top: 3rem;
+  }
+
+  .section-title {
+    font-size: 2rem;
+  }
+
+  .features-grid {
+    grid-template-columns: 1fr;
+    padding: 0 1rem;
+  }
+  
+  .feature-card {
+    padding: 1.5rem;
+  }
+
+  /* Footer */
+  .footer-content {
+    flex-direction: column;
+    text-align: center;
+    gap: 2rem;
+  }
+
+  .footer-right {
+    text-align: center;
+  }
+
+  .social-links {
+    justify-content: center;
+  }
+}
